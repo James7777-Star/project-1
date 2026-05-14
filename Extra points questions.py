@@ -1,54 +1,61 @@
 import numpy as np
 import csv
 
-electronics_list = []
 input_file = "Electronics_Unique_10000.csv"
+output_file = "Electronics_Final_Report.csv"
+
+products, price, stock, sales = [], [], [], []
 
 with open(input_file, "r", encoding="utf-8-sig") as f:
-    reader = csv.reader(f)
-    header = next(reader)
+    reader = csv.DictReader(f)
     for row in reader:
-        if row: electronics_list.append(row)
+        products.append(row["Product_Name"])
+        p = float(row["Unit_Price"].replace('$', '').replace(',', '').strip())
+        price.append(p)
+        stock.append(float(row["Stock_Quantity"]))
+        sales.append(float(row["Sales_Volume"]))
 
-electronics_array = np.array(electronics_list)
-
-def clean_numeric(column_index):
-    col = electronics_array[:, column_index]
-    cleaned = [str(x).replace('$', '').replace(',', '').strip() for x in col]
-    return np.array(cleaned).astype(float)
-
-items = electronics_array[:, 1]
-stocks = clean_numeric(5)
-prices = clean_numeric(8)
-sales = clean_numeric(13)
+products = np.array(products)
+price = np.array(price)
+stock = np.array(stock)
+sales = np.array(sales)
 
 
-inventory_values = stocks * prices
+total_value = price * stock
+discount_revenue = sales * price * 0.8
 
-min_sales_value = np.min(sales)
-worst_indices = np.where(sales == min_sales_value)[0]
-all_worst_items = items[worst_indices]
+sorted_indices = np.argsort(sales)
+hot_3_idx = sorted_indices[-3:][::-1]
+low_3_idx = sorted_indices[:3]
 
-discounted_income_per_item = sales * prices * 0.8
-total_income = np.sum(discounted_income_per_item)
+print("\n" + "="*70)
+print(f" 【最暢銷前三名】")
+for i, idx in enumerate(hot_3_idx, 1):
+    print(f"第 {i} 名: {products[idx]} (銷量: {sales[idx]:.0f})")
 
-print(f"========== 唯一產品大數據分析 (10,000 筆) ==========")
-print(f"最低銷售數量：{min_sales_value:.0f}")
-print(f"最不暢銷商品總數：{len(all_worst_items)} 項")
+print("-" * 70)
+print(f"❄ 【最不暢銷前三名】")
+for i, idx in enumerate(low_3_idx, 1):
+    print(f"第 {i} 名: {products[idx]} (銷量: {sales[idx]:.0f})")
 
-print(f"\n銷量最低的具體型號：")
-for name in all_worst_items[:10]:
-    print(f" - {name}")
+print("-" * 70)
 
-print(f"\n全部商品【八折】後的總收入為：${total_income:,.2f} 元")
-print(f"====================================================\n")
+print(f" 全部商品八折後的總收入為：${np.sum(discount_revenue):,.2f}")
+print("="*70 + "\n")
 
-new_header = header + ["Inventory_Value", "80_Percent_Revenue"]
-final_data = np.column_stack((electronics_array, inventory_values, discounted_income_per_item))
 
-with open("electronics_unique_final.csv", "w", newline="", encoding="utf-8-sig") as f:
-    writer = csv.writer(f)
-    writer.writerow(new_header)
-    writer.writerows(final_data)
+with open(output_file, "w", newline="", encoding="utf-8-sig") as f:
+    w = csv.writer(f)
 
-print(f"分析完成！已存入 electronics_unique_final.csv")
+    w.writerow(["Product", "Stock", "Price", "Sales", "Inventory_Value"])
+
+    for i in range(len(products)):
+        w.writerow([
+            products[i],
+            stock[i],
+            price[i],
+            sales[i],
+            total_value[i]
+        ])
+
+print(f" 分析完畢！CSV 檔案已儲存為：{output_file}")
